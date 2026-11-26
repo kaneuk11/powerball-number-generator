@@ -1,19 +1,355 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>파워볼 번호 생성기</title>
-<style>
-*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#eef2f7;color:#23324a;margin:0;padding:30px 15px}main{max-width:650px;margin:auto;background:white;padding:30px;border-radius:18px;box-shadow:0 8px 30px #182b4518}h1{text-align:center;color:#172e52}p{line-height:1.7}.intro{text-align:center;color:#53647b}.balls{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin:30px 0}.ball{width:65px;height:65px;border-radius:50%;background:#fff;border:2px solid #cbd5e1;display:grid;place-items:center;font-size:25px;font-weight:bold;box-shadow:0 3px 5px #0001}.red{background:#c72c3b;color:white;border-color:#c72c3b}button{width:100%;padding:15px;background:#173c68;color:white;border:0;border-radius:8px;font-size:17px;cursor:pointer}button:hover{background:#28578a}section{background:#f3f6fa;padding:20px;margin-top:24px;border-radius:10px}h2{font-size:19px;margin-top:0}input{width:100%;padding:10px;border:1px solid #aab8ca;border-radius:6px;font-size:16px;margin:8px 0}small{color:#526176;line-height:1.6;display:block}output{font-weight:bold}footer{text-align:center;margin-top:20px;font-size:13px}a{color:#173c68}
-</style></head>
-<body><main><h1>POWERBALL 번호 생성기</h1><p class="intro">일반 번호 5개 (1~69) + 파워볼 1개 (1~26)</p>
-<div class="balls" id="balls" aria-live="polite"><span class="ball">?</span><span class="ball">?</span><span class="ball">?</span><span class="ball">?</span><span class="ball">?</span><span class="ball red">?</span></div>
-<button onclick="generate()">파워볼 번호 생성</button>
-<section><h2>1등 당첨 확률</h2><p>전체 경우의 수 = C(69, 5) × 26 = 292,201,338</p><p>당첨 확률: <strong>1 / 292,201,338</strong><br>약 <strong id="prob"></strong>%</p></section>
-<section><h2>기대값 계산 (1장 기준)</h2><label for="jackpot">가정한 1등 상금 (달러)</label><input id="jackpot" type="number" min="0" step="1" value="100000000" oninput="calculate()"><p>1등 상금 기대값: <output id="first"></output></p><p>전체 상금 기대값: <output id="gross"></output></p><p>순수익 기대값 (전체 상금 − $2): <output id="net"></output></p><small>기대값 = 각 상금 × 해당 당첨 확률의 합. 미국 기본 티켓 $2 기준이며 세금, 공동 당첨, 일시불 할인, 추가 옵션 및 지역별 상금 차이는 제외합니다. 기본 상금은 예시이며 실시간 상금이 아닙니다.</small></section>
-<footer>확률 학습용 · 실제 구매 기능 없음<br><a href="https://www.powerball.com/powerball-prize-chart" target="_blank" rel="noopener">공식 확률 및 상금표</a></footer></main>
-<script>
-const total=292201338;
-function choose(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-i+1)/i;return Math.round(r);}
-function generate(){const numbers=new Set();while(numbers.size<5)numbers.add(Math.floor(Math.random()*69)+1);const result=[...numbers].sort((a,b)=>a-b);result.push(Math.floor(Math.random()*26)+1);document.querySelectorAll('.ball').forEach((ball,i)=>ball.textContent=result[i]);}
-function calculate(){const input=document.getElementById('jackpot');const ids=['first','gross','net'];if(input.value===''||!Number.isFinite(input.valueAsNumber)||input.valueAsNumber<0){ids.forEach(id=>document.getElementById(id).textContent='상금을 입력하세요');return;}const jackpot=input.valueAsNumber;const tiers=[[5,0,1000000],[4,1,50000],[4,0,100],[3,1,100],[3,0,7],[2,1,7],[1,1,4],[0,1,4]];let lower=0;for(const [matches,pb,prize] of tiers){lower+=choose(5,matches)*choose(64,5-matches)*(pb?1:25)*prize/total;}const first=jackpot/total;const fmt=n=>n.toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:4,maximumFractionDigits:4});[first,first+lower,first+lower-2].forEach((v,i)=>document.getElementById(ids[i]).textContent=fmt(v));}
-document.getElementById('prob').textContent=(100/total).toFixed(10);calculate();
-</script></body></html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f7fb">
+    <title>파워볼 번호 생성기</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #17213a;
+        background: #f6f7fb;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        padding: 48px 20px;
+        background:
+          radial-gradient(ellipse at 50% -15%, #e6ecff 0, transparent 48%),
+          #f6f7fb;
+      }
+
+      button, input { font: inherit; }
+
+      .container {
+        width: min(100%, 760px);
+        margin: 0 auto;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #5268d8;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 6vw, 3.2rem);
+        letter-spacing: -0.055em;
+        text-align: center;
+      }
+
+      .intro {
+        margin: 12px auto 30px;
+        color: #68728a;
+        line-height: 1.7;
+        text-align: center;
+      }
+
+      .card {
+        border: 1px solid #e9ebf2;
+        border-radius: 24px;
+        background: #fff;
+        box-shadow: 0 18px 55px rgb(34 47 91 / 8%);
+      }
+
+      .generator {
+        padding: clamp(22px, 5vw, 38px);
+        text-align: center;
+      }
+
+      .label {
+        margin: 0 0 20px;
+        color: #737d93;
+        font-size: 0.9rem;
+        font-weight: 650;
+      }
+
+      .numbers {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: clamp(8px, 2.4vw, 16px);
+        min-height: 58px;
+        margin-bottom: 27px;
+      }
+
+      .ball {
+        display: grid;
+        width: clamp(46px, 12vw, 62px);
+        aspect-ratio: 1;
+        place-items: center;
+        border: 1px solid #e6e9f2;
+        border-radius: 50%;
+        background: #f7f8fc;
+        color: #25304a;
+        font-size: clamp(1.05rem, 4vw, 1.35rem);
+        font-weight: 800;
+        box-shadow: inset 0 -3px 0 rgb(20 30 55 / 5%);
+      }
+
+      .ball.powerball {
+        border-color: #e33b4b;
+        background: #e94252;
+        color: #fff;
+        box-shadow: inset 0 -3px 0 rgb(115 0 12 / 15%);
+      }
+
+      .placeholder {
+        display: grid;
+        width: 100%;
+        min-height: 58px;
+        place-items: center;
+        color: #a0a7b6;
+        font-size: 0.95rem;
+      }
+
+      .generate {
+        min-height: 54px;
+        padding: 0 28px;
+        border: 0;
+        border-radius: 14px;
+        background: #5268d8;
+        color: #fff;
+        cursor: pointer;
+        font-weight: 750;
+        transition: background 160ms ease, transform 160ms ease;
+      }
+
+      .generate:hover { background: #4157c4; transform: translateY(-1px); }
+      .generate:active { transform: translateY(0); }
+      .generate:focus-visible, input:focus-visible {
+        outline: 3px solid #aeb9ff;
+        outline-offset: 3px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .stat {
+        padding: 22px;
+        text-align: left;
+      }
+
+      .stat-label {
+        margin: 0 0 8px;
+        color: #737d93;
+        font-size: 0.86rem;
+        font-weight: 650;
+      }
+
+      .stat-value {
+        margin: 0;
+        color: #202b49;
+        font-size: clamp(1.35rem, 4vw, 1.85rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .stat-note {
+        margin: 8px 0 0;
+        color: #858da0;
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+
+      .jackpot-control {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 18px;
+        padding: 18px 22px;
+      }
+
+      .jackpot-control label {
+        color: #4b566f;
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #737d93;
+      }
+
+      input {
+        width: min(42vw, 170px);
+        padding: 10px 12px;
+        border: 1px solid #dfe3ed;
+        border-radius: 10px;
+        color: #202b49;
+        text-align: right;
+      }
+
+      .details {
+        margin-top: 26px;
+        padding: 25px 28px;
+      }
+
+      .details h2 {
+        margin: 0 0 12px;
+        font-size: 1.03rem;
+      }
+
+      .details p {
+        margin: 8px 0;
+        color: #69738a;
+        font-size: 0.88rem;
+        line-height: 1.65;
+      }
+
+      .disclaimer {
+        margin: 18px 8px 0;
+        color: #9299a8;
+        font-size: 0.76rem;
+        line-height: 1.65;
+        text-align: center;
+      }
+
+      @media (max-width: 520px) {
+        body { padding: 34px 16px; }
+        .stats { grid-template-columns: 1fr; gap: 10px; }
+        .stat { padding: 18px 20px; }
+        .jackpot-control { align-items: flex-start; flex-direction: column; }
+        .input-wrap, input { width: 100%; }
+        .details { padding: 22px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <p class="eyebrow">Powerball number generator</p>
+      <h1>오늘의 파워볼 번호</h1>
+      <p class="intro">버튼을 눌러 흰색 공 5개와 파워볼 1개를 무작위로 뽑아보세요.</p>
+
+      <section class="card generator" aria-labelledby="numbers-title">
+        <h2 class="label" id="numbers-title">당첨 번호 조합</h2>
+        <div class="numbers" id="numbers" aria-live="polite" aria-label="생성된 번호">
+          <span class="placeholder">아래 버튼을 눌러 번호를 생성하세요</span>
+        </div>
+        <button class="generate" id="generate" type="button">번호 생성하기</button>
+      </section>
+
+      <section class="stats" aria-label="당첨 확률과 기대값">
+        <article class="card stat">
+          <p class="stat-label">1등(잭팟) 당첨 확률</p>
+          <p class="stat-value">1 / 292,201,338</p>
+          <p class="stat-note">약 2억 9,220만 분의 1</p>
+        </article>
+        <article class="card stat">
+          <p class="stat-label">티켓 1장 기대값</p>
+          <p class="stat-value" id="gross-ev">$0.00</p>
+          <p class="stat-note" id="net-ev">티켓 가격 $2.00 차감 후: $0.00</p>
+        </article>
+      </section>
+
+      <section class="card jackpot-control" aria-label="잭팟 금액 설정">
+        <label for="jackpot">잭팟 금액 (광고된 연금 기준)</label>
+        <div class="input-wrap">
+          <span>$</span>
+          <input id="jackpot" type="number" min="0" step="1000000" value="100000000" inputmode="numeric">
+        </div>
+      </section>
+
+      <section class="card details" aria-labelledby="details-title">
+        <h2 id="details-title">확률과 기대값 안내</h2>
+        <p>파워볼은 흰색 공 69개 중 5개와 빨간 파워볼 26개 중 1개를 추첨합니다. 잭팟 확률은 1 ÷ (C(69, 5) × 26)입니다.</p>
+        <p>기대값은 잭팟 금액과 각 비잭팟 상금 등급의 당첨 확률을 합산한 세전 예상 상금입니다. 순기대값은 여기에서 티켓 가격 $2를 뺀 금액입니다.</p>
+      </section>
+      <p class="disclaimer">번호 생성은 무작위이며 당첨을 예측하거나 보장하지 않습니다. 기대값은 잭팟을 연금 방식으로 받는다고 가정한 단순 추정치로, 세금·현금 일시불 선택·주별 규정은 반영하지 않았습니다.</p>
+    </main>
+
+    <script>
+      const TICKET_PRICE = 2;
+      const JACKPOT_ODDS = 292201338;
+      const WHITE_COMBINATIONS = 11238513;
+      const prizeTiers = [
+        { white: 5, powerball: true, prize: 1000000 },
+        { white: 4, powerball: true, prize: 50000 },
+        { white: 4, powerball: false, prize: 100 },
+        { white: 3, powerball: true, prize: 100 },
+        { white: 3, powerball: false, prize: 7 },
+        { white: 2, powerball: true, prize: 7 },
+        { white: 1, powerball: true, prize: 4 },
+        { white: 0, powerball: true, prize: 4 }
+      ];
+
+      const numberContainer = document.querySelector("#numbers");
+      const jackpotInput = document.querySelector("#jackpot");
+      const grossEv = document.querySelector("#gross-ev");
+      const netEv = document.querySelector("#net-ev");
+
+      function randomInteger(max) {
+        return Math.floor(Math.random() * max) + 1;
+      }
+
+      function generateNumbers() {
+        const whites = new Set();
+        while (whites.size < 5) whites.add(randomInteger(69));
+
+        numberContainer.replaceChildren();
+        [...whites].sort((a, b) => a - b).forEach((number) => {
+          const ball = document.createElement("span");
+          ball.className = "ball";
+          ball.textContent = String(number).padStart(2, "0");
+          numberContainer.append(ball);
+        });
+
+        const powerball = document.createElement("span");
+        powerball.className = "ball powerball";
+        powerball.textContent = String(randomInteger(26)).padStart(2, "0");
+        powerball.setAttribute("aria-label", `파워볼 ${powerball.textContent}`);
+        numberContainer.append(powerball);
+      }
+
+      function combinations(n, k) {
+        let result = 1;
+        for (let i = 1; i <= k; i++) result = result * (n - i + 1) / i;
+        return result;
+      }
+
+      function updateExpectedValue() {
+        const jackpot = Math.max(0, Number(jackpotInput.value) || 0);
+        const jackpotProbability = 1 / JACKPOT_ODDS;
+        let expectedPayout = jackpot * jackpotProbability;
+
+        for (const tier of prizeTiers) {
+          const whiteMatches = combinations(5, tier.white) *
+            combinations(64, 5 - tier.white);
+          const powerballProbability = tier.powerball ? 1 / 26 : 25 / 26;
+          expectedPayout += tier.prize * whiteMatches / WHITE_COMBINATIONS * powerballProbability;
+        }
+
+        grossEv.textContent = `$${expectedPayout.toFixed(2)}`;
+        netEv.textContent = `티켓 가격 $${TICKET_PRICE.toFixed(2)} 차감 후: $${(expectedPayout - TICKET_PRICE).toFixed(2)}`;
+      }
+
+      document.querySelector("#generate").addEventListener("click", generateNumbers);
+      jackpotInput.addEventListener("input", updateExpectedValue);
+      updateExpectedValue();
+    </script>
+  </body>
+</html>
